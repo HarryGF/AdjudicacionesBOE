@@ -15,5 +15,3 @@ jupyterlab/
 *.pyc
 .DS_Store
 codigosCPV.csv
-chatbot_licitaciones.py
-rag_licitacion.py
