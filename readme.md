@@ -45,7 +45,7 @@ API BOE (sumario diario)
 ├── procesamiento_datos.py       # Módulo de procesamiento: normalización CPV con Ollama
 ├── filtro_datos.py              # Módulo de filtrado: CPV objetivo + adjudicatarios
 ├── filtro_datos_prueba.py       # Script de prueba/desarrollo del módulo de filtrado
-├── codigosCPV.csv       # Lista de códigos CPV de interés (requerido)
+├── codigosCPV.csv               # Lista de códigos CPV de interés (requerido)
 ├── Datos_Brutos/                # JSONs generados tras la extracción (auto-creado)
 ├── Datos_Procesados/            # JSONs generados tras el procesamiento IA (auto-creado)
 └── Adjudicaciones_Filtradas/    # JSONs con resultados finales (auto-creado)
