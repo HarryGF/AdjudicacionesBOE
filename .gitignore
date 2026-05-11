@@ -1,0 +1,17 @@
+# Ignorar carpetas de datos generadas por el script
+Datos_Brutos/
+Datos_Procesados/
+Adjudicaciones_Filtradas/
+Datos_Pliegos/
+Documentos_Pliegos/
+
+# Ignorar archivos de Python y sistema
+__pycache__/
+.ipynb_checkpoints/
+pruebas/
+scripts/
+jupyterlab/ 
+.env
+*.pyc
+.DS_Store
+codigosCPV.csv
