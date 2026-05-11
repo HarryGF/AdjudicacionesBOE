@@ -219,6 +219,7 @@ else:
 st.divider()
 tab_visor, tab_historial, tab_semana = st.tabs(["Visor de Archivos", "Historial de la Sesión","Informe Semanal"])
 
+
 with tab_visor:
     if not df_visor.empty and columnas_seleccionadas:
         st.subheader(f"Archivo: {doc_seleccionado}")
@@ -242,3 +243,5 @@ with tab_semana:
         if datos:
             df_sem = cargar_json_a_dataframe(datos)
             mostrar_datos_agrupados(df_sem, COLUMNAS_DEFAULT)
+
+        st.warning("Aún no se ha ejecutado el programa.")
