@@ -21,6 +21,6 @@ if errorlevel 1 (
     timeout /t 10 /nobreak >NUL
 )
 
-%PYTHON% ejecutarPipeline(prueba).py >> "%DIRECTORIO%\Logs_Pipeline\output.txt" 2>&1
+%PYTHON% ejecutar_pipeline.py >> "%DIRECTORIO%\Logs_Pipeline\output.txt" 2>&1
 pause
 exit /b %ERRORLEVEL%
