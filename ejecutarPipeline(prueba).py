@@ -37,26 +37,23 @@ if __name__ == "__main__":
     else:
         resultado = ejecutar_dia(fecha_str)
 
-        if hoy.weekday() == 4:  # Viernes: informe semanal + correo
-            datos_semana = informe_semanal.generar_informe_semana(hoy)
+        if hoy.weekday() == 2:  # Viernes: informe semanal
+            informe_semanal.generar_informe_semana(hoy)
 
-            lunes = hoy - datetime.timedelta(days=hoy.weekday())
-            lunes_str = lunes.strftime("%Y%m%d")
-            ruta_anuncios = Path("Adjudicaciones_Filtradas") / f"Informe_Anuncios_{lunes_str}.csv"
-            ruta_lotes    = Path("Adjudicaciones_Filtradas") / f"Informe_Lotes_{lunes_str}.csv"
-
-            n_anuncios = len(datos_semana.get("anuncios", [])) if datos_semana else 0
-            n_lotes    = len(datos_semana.get("lotes",    [])) if datos_semana else 0
+        # Correo diario — se envía siempre que haya datos
+        if resultado.get("status") == "ok" and resultado.get("anuncios", 0) > 0:
+            ruta_anuncios = Path("Adjudicaciones_Filtradas") / f"Informe_Anuncios_20260511.csv"
+            ruta_lotes    = Path("Adjudicaciones_Filtradas") / f"Informe_Lotes_20260511.csv"
 
             load_dotenv()
             em = EmailMessage()
-            em["From"]    = os.getenv("SENDER")
-            em["To"]      = os.getenv("RECEIVER")
-            em["Subject"] = f"Informe Semanal BOE — Semana del {lunes.strftime('%d/%m/%Y')}"
+            em["From"]    = "hxmn864@gmail.com"
+            em["To"]      = "harry.floresca@iesmat.com"
+            em["Subject"] = f"BOE Adjudicaciones — {hoy.strftime('%d/%m/%Y')}"
             em.set_content(
-                f"Informe semanal correspondiente a la semana del {lunes.strftime('%d/%m/%Y')}.\n\n"
-                f"Anuncios : {n_anuncios}\n"
-                f"Lotes    : {n_lotes}\n"
+                f"Resultados del {hoy.strftime('%d/%m/%Y')}.\n\n"
+                f"Anuncios : {resultado['anuncios']}\n"
+                f"Lotes    : {resultado['lotes']}\n"
             )
 
             for ruta_csv in (ruta_anuncios, ruta_lotes):

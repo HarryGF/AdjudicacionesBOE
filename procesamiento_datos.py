@@ -1,9 +1,10 @@
 import json
 import os
+from weakref import ref
 
 import ollama
 
-MODELO = "llama3.2:3b"
+MODELO = "qwen2.5:3b"
 
 SYSTEM_PROMPT = """Eres un extractor de datos estricto para contratación pública. Tu única tarea es encontrar todos los códigos CPV (números exactos de 8 dígitos) en el texto.
 
@@ -59,9 +60,9 @@ def ejecutar_procesamiento(fecha_str, datos):
                 ],
                 format='json',
                 options={
-                    'temperature': 0.0,    # Creatividad cero para máxima precisión
-                    'num_predict': 256,    # Limitamos la respuesta para ahorrar VRAM
-                    'top_p': 0.1           # Enfocamos al modelo en las respuestas más probables
+                    'temperature': 0.0,   
+                    'num_predict': 256,   
+                    'top_p': 0.1           
                 }
             )
             

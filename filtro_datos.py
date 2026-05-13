@@ -53,10 +53,8 @@ def dividir_por_lotes(texto_bloque, num_seccion):
     for i, match in enumerate(iterador):
         nombre_lote = f"Lote {match.group(1).strip()}"
         inicio = match.end()
-        # Cortamos hasta el inicio del siguiente lote, o hasta el final del texto
         fin = iterador[i+1].start() if i + 1 < len(iterador) else len(texto_bloque)
-        lotes[nombre_lote] = texto_bloque[inicio:fin]
-        
+        lotes[nombre_lote] = texto_bloque[inicio:fin] 
     return lotes
 
 def limpiar_basura_boe(texto):
@@ -71,12 +69,15 @@ def descargar_y_extraer_texto(url_pdf):
         texto = " ".join((p.extract_text() or "") for p in pdf.pages)
         return re.sub(r'\s+', ' ', texto)
 
-def exportar_datos(datos, nombre, fecha):
+# --- NUEVA FUNCIÓN PARA EXPORTAR CSV ---
+def exportar_a_csv(lista_diccionarios, columnas, nombre_archivo):
     os.makedirs("Adjudicaciones_Filtradas", exist_ok=True)
-    ruta = f"Adjudicaciones_Filtradas/{nombre}{fecha}.json"
-    with open(ruta, "w", encoding="utf-8") as f:
-        json.dump(datos, f, indent=4, ensure_ascii=False)
-    print(f"Resultados exportados a: {ruta}")
+    ruta = f"Adjudicaciones_Filtradas/{nombre_archivo}.csv"
+    with open(ruta, "w", encoding="utf-8-sig", newline='') as f:
+        escritor = csv.DictWriter(f, fieldnames=columnas)
+        escritor.writeheader()
+        escritor.writerows(lista_diccionarios)
+    print(f"Archivo creado: {ruta}")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # FUNCIONES DE EXTRACCIÓN
@@ -103,9 +104,7 @@ def extraer_adjudicatarios(texto_completo, lista_lotes):
     bloque12 = limpiar_basura_boe(match_bloque.group(1))
     trozos_lotes = dividir_por_lotes(bloque12, "12")
     
-    # Condición de parada para leer campos independientemente de si es 12.1) o 12.1.2)
     sig_campo = r"(?=\s*\d+\.(?:\d+\.)*\d+\)|$)" 
-    lista_nif = []
     resultados = {}
 
     for lote_nombre, chunk in trozos_lotes.items():
@@ -116,14 +115,14 @@ def extraer_adjudicatarios(texto_completo, lista_lotes):
         m_nif = re.search(r"Número de identificación fiscal:\s*([A-Z0-9]+)", chunk)
         m_dir = re.search(r"Dirección:\s*(.*?)\." + sig_campo, chunk)
         m_loc = re.search(r"Localidad:\s*(.*?)\." + sig_campo, chunk)
-        m_cp = re.search(r"Código postal:\s*(\d+)", chunk)
+        m_cp  = re.search(r"Código postal:\s*(\d+)", chunk)
         m_pais = re.search(r"País:\s*(.*?)\." + sig_campo, chunk)
         
         nif = m_nif.group(1).strip() if m_nif else "SIN_NIF"
 
         datos = {
             "Nombre Adjudicatario": m_nom.group(1).strip() if m_nom else "",
-            "NIF": m_nif.group(1).strip() if m_nif else "SIN_NIF",
+            "NIF": nif,
             "Direccion": m_dir.group(1).strip() if m_dir else "No disponible",
             "Localidad": m_loc.group(1).strip() if m_loc else "",
             "Codigo Postal": m_cp.group(1).strip() if m_cp else "",
@@ -132,12 +131,10 @@ def extraer_adjudicatarios(texto_completo, lista_lotes):
         
         datos["PYME"] = "si" if "es una pyme" in chunk.lower() and "no es" not in chunk.lower() else "no"
         resultados[lote_nombre] = datos
-        lista_nif.append(nif)
 
-    return resultados, lista_nif
+    return resultados
 
 def extraer_importes(texto_completo):
-    # Extraemos solo el bloque 13 (se detiene en el 14, 15 o final)
     match_bloque = re.search(r"13\.\s*Valor de las ofertas:(.*?)(?=\s*14\.\s|\s*15\.\s|$)", texto_completo, re.IGNORECASE)
     if not match_bloque: return {}
     
@@ -147,68 +144,86 @@ def extraer_importes(texto_completo):
     resultados = {}
     for lote_nombre, chunk in trozos_lotes.items():
         sel = re.search(r"seleccionada:\s*([\d.,]+)", chunk)
-        
         resultados[lote_nombre] = sel.group(1) if sel else "0,00"
     return resultados
 
+# ══════════════════════════════════════════════════════════════════════════════
+# PROCESAMIENTO PRINCIPAL
+# ══════════════════════════════════════════════════════════════════════════════
+
 def filtrado_formalizaciones(fecha, datos):
-    csv_objetivo = "codigosCPV.csv"
-    cpvs_objetivo = codigos_objetivo(csv_objetivo)
+    cpvs_objetivo = codigos_objetivo("codigosCPV.csv")
     if not cpvs_objetivo:
         return {"status": "error", "mensaje": "No se pudieron cargar los CPV objetivo."}
 
-    formalizaciones_encontradas = {}
-    adjudicatarios = {}
+    tabla_A = []
+    tabla_B = []
 
     for id_formalizacion, info in datos.items():
         cpvs_articulo = info.get("Códigos CPV", [])
-        if not cpvs_articulo:
-            continue
-
         coincidencias = set(cpvs_articulo).intersection(cpvs_objetivo)
         if not coincidencias:
             continue
 
         print(f"  Coincidencia encontrada: {id_formalizacion}")
-        formalizacion = dict(info)
 
-        url_pdf = info["PDF"]
+        url_pdf = info.get("PDF", "")
         if not url_pdf:
-            formalizacion["Adjudicatarios"] = []
-            formalizaciones_encontradas[id_formalizacion] = formalizacion
+            print(f"  Sin PDF para {id_formalizacion}, omitiendo.")
             continue
-        texto_limpio = descargar_y_extraer_texto(info["PDF"])
+
+        try:
+            texto_limpio = descargar_y_extraer_texto(url_pdf)
+        except Exception as e:
+            print(f"  Error descargando PDF de {id_formalizacion}: {e}")
+            continue
 
         metadatos = extraer_metadatos(texto_limpio)
-        importes = extraer_importes(texto_limpio)
-        lista_lotes = []
-        for lote_nombre, importe in importes.items():
-            x = importe.replace(".","")
-            y = x.replace(",",".")
-            if float(y) < 10000:
-                lista_lotes.append(lote_nombre)
+        importes  = extraer_importes(texto_limpio)
+
+        # Tabla A siempre que tengamos texto
+        tabla_A.append({
+            "ID Anuncio":      id_formalizacion,
+            "Expediente":      metadatos.get("Expediente", ""),
+            "Objeto":          metadatos.get("Objeto", ""),
+            "PDF":             url_pdf,
+            "CPV Coincidentes": ", ".join(coincidencias)
+        })
+
+        lotes_excluidos = []
+        for lote, imp in importes.items():
+            try:
+                val = float(imp.replace(".", "").replace(",", "."))
+                if val < 10000:
+                    lotes_excluidos.append(lote)
+            except ValueError:
+                print(f"  Importe no parseable '{imp}' en lote '{lote}'")
+
         try:
-            adjudicatarios_datos, lista_nif = extraer_adjudicatarios(texto_limpio, lista_lotes) 
-
-            if adjudicatarios_datos:
-                adjudicatarios[id_formalizacion] = adjudicatarios_datos
-                if importes:
-                    for lote_nombre, importe in importes.items():
-                        for nif in lista_nif:
-                            adjudicatarios[id_formalizacion][lote_nombre]["Importe"] = importe
-            
-                    item = dict(info)
-                    item["CPV Coincidentes"] = list(coincidencias)
-                    item.update(metadatos)
-                    
-                    formalizaciones_encontradas[id_formalizacion] = item
+            adjudicatarios_datos = extraer_adjudicatarios(texto_limpio, lotes_excluidos)
         except Exception as e:
-            return {"status": "error", "mensaje": f"{id_formalizacion}: {e}"}
+            print(f"  Error extrayendo adjudicatarios de {id_formalizacion}: {e}")
+            continue
 
-    print(f"\nTotal formalizaciones coincidentes: {len(formalizaciones_encontradas)}")
-    if not formalizaciones_encontradas:
-        return {"status": "ok", "cantidad": 0, "mensaje": "No hay formalizaciones coincidentes."}
+        for lote_nombre, datos_adj in adjudicatarios_datos.items():
+            tabla_B.append({
+                "ID Anuncio":          id_formalizacion,
+                "Num Lote":            lote_nombre,
+                "Nombre Adjudicatario": datos_adj["Nombre Adjudicatario"],
+                "NIF":                 datos_adj["NIF"],
+                "Direccion":           datos_adj["Direccion"],
+                "Localidad":           datos_adj["Localidad"],
+                "Codigo Postal":       datos_adj["Codigo Postal"],
+                "Pais":                datos_adj["Pais"],
+                "PYME":                datos_adj["PYME"],
+                "Importe":             importes.get(lote_nombre, "0,00")
+            })
 
-    exportar_datos(formalizaciones_encontradas, "Documento",fecha)
-    exportar_datos(adjudicatarios, "Adjudicatarios",fecha)
-    return {"status": "ok", "cantidad": len(formalizaciones_encontradas), "datos": adjudicatarios}
+    columnas_A = ["ID Anuncio", "Expediente", "Objeto", "PDF", "CPV Coincidentes"]
+    columnas_B = ["ID Anuncio", "Num Lote", "Nombre Adjudicatario", "NIF", "Direccion",
+                  "Localidad", "Codigo Postal", "Pais", "PYME", "Importe"]
+
+    exportar_a_csv(tabla_A, columnas_A, f"Anuncios_{fecha}")
+    exportar_a_csv(tabla_B, columnas_B, f"Lotes_{fecha}")
+
+    return {"status": "ok", "anuncios": len(tabla_A), "lotes": len(tabla_B)}
