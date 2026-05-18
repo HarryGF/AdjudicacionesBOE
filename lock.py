@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import psutil
 
 LOCK_FILE = Path("pipeline.lock")
 
@@ -8,8 +9,9 @@ def adquirir_lock(origen: str = "desconocido") -> bool:
         try:
             contenido = LOCK_FILE.read_text().strip().splitlines()
             pid = int(contenido[1]) if len(contenido) > 1 else None
-            if pid and _proceso_vivo(pid):
-                return False  
+            if pid and psutil.pid_exists(pid):
+                return False  # Proceso real en marcha, bloqueamos
+            # El proceso ya no existe, el lock es huérfano
             LOCK_FILE.unlink()
         except Exception:
             LOCK_FILE.unlink(missing_ok=True)
@@ -19,10 +21,3 @@ def adquirir_lock(origen: str = "desconocido") -> bool:
 
 def liberar_lock():
     LOCK_FILE.unlink(missing_ok=True)
-
-def _proceso_vivo(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)  
-        return True
-    except OSError:
-        return False
