@@ -60,8 +60,9 @@ if __name__ == "__main__":
                 em["Subject"] = f"Informe Semanal BOE (Adjudicaciones) — Semana del {lunes.strftime('%d/%m/%Y')}"
                 em.set_content(
                     f"Informe semanal correspondiente a la semana del {lunes.strftime('%d/%m/%Y')}.\n\n"
-                    f"Anuncios : {n_anuncios}\n"
-                    f"Lotes    : {n_lotes}\n"
+                    f"Anuncios: {n_anuncios}\n"
+                    f"Lotes: {n_lotes}\n"
+                    f"Enlace a la consola: {os.getenv("STREAMLIT_URL")}"
                 )
 
                 for ruta_csv in (ruta_anuncios, ruta_lotes):

@@ -10,8 +10,7 @@ def adquirir_lock(origen: str = "desconocido") -> bool:
             contenido = LOCK_FILE.read_text().strip().splitlines()
             pid = int(contenido[1]) if len(contenido) > 1 else None
             if pid and psutil.pid_exists(pid):
-                return False  # Proceso real en marcha, bloqueamos
-            # El proceso ya no existe, el lock es huérfano
+                return False  
             LOCK_FILE.unlink()
         except Exception:
             LOCK_FILE.unlink(missing_ok=True)
