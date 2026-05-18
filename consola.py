@@ -246,7 +246,7 @@ with tab_historial:
 
 with tab_semana:
     if st.button("Generar informe de esta semana"):
-        datos_semana = informe_semanal.generar_informe_semana()
+        datos_semana = informe_semanal.generar_informe_semana(dia)
         if datos_semana:
             # Mostramos anuncios y lotes en subtabs separados
             sub_a, sub_b = st.tabs(["Anuncios", "Lotes"])
