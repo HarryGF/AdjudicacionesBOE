@@ -4,15 +4,25 @@ from pathlib import Path
 LOCK_FILE = Path("pipeline.lock")
 
 def adquirir_lock(origen: str = "desconocido") -> bool:
-    """
-    Intenta adquirir el lock. Devuelve True si lo consigue, False si hay timeout.
-    'origen' es solo para logging ('scheduler' o 'streamlit').
-    """
     if LOCK_FILE.exists():
-        return False
+        try:
+            contenido = LOCK_FILE.read_text().strip().splitlines()
+            pid = int(contenido[1]) if len(contenido) > 1 else None
+            if pid and _proceso_vivo(pid):
+                return False  
+            LOCK_FILE.unlink()
+        except Exception:
+            LOCK_FILE.unlink(missing_ok=True)
+
     LOCK_FILE.write_text(f"{origen}\n{os.getpid()}")
     return True
 
 def liberar_lock():
-    if LOCK_FILE.exists():
-        LOCK_FILE.unlink()
+    LOCK_FILE.unlink(missing_ok=True)
+
+def _proceso_vivo(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)  
+        return True
+    except OSError:
+        return False
