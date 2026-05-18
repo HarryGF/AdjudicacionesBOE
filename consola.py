@@ -4,12 +4,13 @@ import pandas as pd
 import time
 from pathlib import Path
 
+import lock
 import extraccion_datos
 import procesamiento_datos
 import filtro_datos
 import informe_semanal
 
-st.set_page_config(page_title="BOE Formalizaciones", layout="wide")
+st.set_page_config(page_title="BOE Adjudicaciones", layout="wide")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN
@@ -136,7 +137,7 @@ with st.sidebar:
 # ══════════════════════════════════════════════════════════════════════════════
 # CUERPO PRINCIPAL
 # ══════════════════════════════════════════════════════════════════════════════
-st.title("BOE Formalizaciones")
+st.title("BOE Adjudicaciones")
 st.markdown("Pipeline de extracción y filtrado de contratos adjudicados del BOE.")
 
 fecha_str = dia.strftime("%Y%m%d")
@@ -159,43 +160,51 @@ with col_btn:
 # PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 if ejecutar:
-    with st.status("Ejecutando Pipeline...", expanded=True) as status:
+    if not lock.adquirir_lock("streamlit"):
+        st.error("La pipeline se está ejecutando ahora. Espera unos minutos e inténtalo de nuevo.")
+        st.stop()
+    
+    try: 
+        with st.status("Ejecutando Pipeline...", expanded=True) as status:
 
-        st.write(f"Conectando a la API del BOE para el **{fecha_str}**...")
-        resultado_extraccion = extraccion_datos.ejecutar_extraccion(fecha_str)
-        if resultado_extraccion["status"] == "error":
-            status.update(label="Error en la extracción", state="error")
-            st.error(resultado_extraccion["mensaje"]); st.stop()
-        if resultado_extraccion.get("cantidad", 0) == 0:
-            status.update(label="Sin formalizaciones hoy", state="complete")
-            st.success("No se han encontrado anuncios de adjudicación para esta fecha."); st.stop()
+            st.write(f"Conectando a la API del BOE para el **{fecha_str}**...")
+            resultado_extraccion = extraccion_datos.ejecutar_extraccion(fecha_str)
+            if resultado_extraccion["status"] == "error":
+                status.update(label="Error en la extracción", state="error")
+                st.error(resultado_extraccion["mensaje"]); st.stop()
+            if resultado_extraccion.get("cantidad", 0) == 0:
+                status.update(label="Sin formalizaciones hoy", state="complete")
+                st.success("No se han encontrado anuncios de adjudicación para esta fecha."); st.stop()
 
-        st.write("Normalizando códigos CPV con IA local (Ollama)...")
-        resultado_procesamiento = procesamiento_datos.ejecutar_procesamiento(
-            fecha_str, resultado_extraccion["datos"]
-        )
-        if resultado_procesamiento["status"] == "error":
-            status.update(label="Error en el procesamiento IA", state="error")
-            st.error(resultado_procesamiento["mensaje"]); st.stop()
+            st.write("Normalizando códigos CPV con IA local (Ollama)...")
+            resultado_procesamiento = procesamiento_datos.ejecutar_procesamiento(
+                fecha_str, resultado_extraccion["datos"]
+            )
+            if resultado_procesamiento["status"] == "error":
+                status.update(label="Error en el procesamiento IA", state="error")
+                st.error(resultado_procesamiento["mensaje"]); st.stop()
 
-        st.write("Filtrando por CPV objetivo y extrayendo adjudicatarios...")
-        resultado_filtrado = filtro_datos.filtrado_formalizaciones(
-            fecha_str, resultado_procesamiento["datos"]
-        )
-        if resultado_filtrado["status"] == "error":
-            status.update(label="Error en el filtrado", state="error")
-            st.error(resultado_filtrado["mensaje"]); st.stop()
-        if resultado_filtrado.get("anuncios", 0) == 0:
-            status.update(label="Sin coincidencias CPV", state="complete")
-            st.info("Ninguna formalización coincide con los CPV objetivo."); st.stop()
+            st.write("Filtrando por CPV objetivo y extrayendo adjudicatarios...")
+            resultado_filtrado = filtro_datos.filtrado_formalizaciones(
+                fecha_str, resultado_procesamiento["datos"]
+            )
+            if resultado_filtrado["status"] == "error":
+                status.update(label="Error en el filtrado", state="error")
+                st.error(resultado_filtrado["mensaje"]); st.stop()
+            if resultado_filtrado.get("anuncios", 0) == 0:
+                status.update(label="Sin coincidencias CPV", state="complete")
+                st.info("Ninguna formalización coincide con los CPV objetivo."); st.stop()
 
-        # Cargamos el resultado mergeando los dos CSV generados
-        df_resultado = cargar_csvs_fecha(fecha_str)
-        st.session_state.ultimo_resultado = df_resultado
-        st.session_state.ultima_fecha = fecha_str
-        st.session_state.historial[fecha_str] = df_resultado
-        status.update(label="Pipeline completado con éxito", state="complete", expanded=False)
+            # Cargamos el resultado mergeando los dos CSV generados
+            dfResultado = cargar_csvs_fecha(fecha_str)
+            st.session_state.ultimo_resultado = dfResultado
+            st.session_state.ultima_fecha = fecha_str
+            st.session_state.historial[fecha_str] = dfResultado
+            status.update(label="Pipeline completado con éxito", state="complete", expanded=False)
 
+            pass
+    finally:
+        lock.liberar_lock()
     st.toast(f"¡Datos del {fecha_str} guardados correctamente!")
     time.sleep(1)
     st.rerun()
@@ -211,8 +220,6 @@ if st.session_state.ultimo_resultado is not None:
         mostrar_datos_agrupados(df_res, COLUMNAS_DEFAULT)
     else:
         st.warning("No hay datos para mostrar.")
-else:
-    st.warning("Ejecute el programa.")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PESTAÑAS
