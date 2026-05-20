@@ -38,16 +38,26 @@ def ejecutar_procesamiento(fecha_str, datos):
               devuelve un diccionario con el estado 'error' y su mensaje correspondiente.
     """
     ruta_salida = f"Datos_Procesados/{fecha_str}.json"  
-
     os.makedirs("Datos_Procesados", exist_ok=True)
-
     datos_filtrados = {}
 
     for id_licitacion, info in datos.items():
+        descripcion = info.get('descripcion_bruta', '').strip()
+        cpv_bruto = info.get('cpv_bruto', [])
+
+        # 1. OPTIMIZACIÓN: Cláusula de guarda para evitar llamadas innecesarias a la IA
+        if not descripcion or descripcion.lower() == "no encontrada":
+            datos_filtrados[id_licitacion] = {
+                "Códigos CPV": cpv_bruto, # Mantenemos lo que ya venía de la API
+                "PDF": info.get('pdf', ''),
+                "nota": "Procesado sin IA (sin descripción válida)"
+            }
+            continue # Saltamos a la siguiente licitación sin tocar Ollama
+
         prompt_usuario = f"""
         Extrae los códigos CPV de la siguiente licitación. 
-        Códigos CPV actuales: {info.get('cpv_bruto', '')}
-        Descripción licitación: {info.get('descripcion_bruta', '')}
+        Códigos CPV actuales: {cpv_bruto}
+        Descripción licitación: {descripcion}
         """
 
         try:
@@ -59,9 +69,11 @@ def ejecutar_procesamiento(fecha_str, datos):
                     {'role': 'user', 'content': prompt_usuario}
                 ],
                 format='json',
+                keep_alive='1m', # 2. OPTIMIZACIÓN: Descarga el modelo de la RAM 1 min después de acabar el script
                 options={
                     'temperature': 0.0,   
                     'num_predict': 256,   
+                    'num_ctx': 1024,     # 3. OPTIMIZACIÓN: Reduce el uso de RAM limitando el contexto
                     'top_p': 0.1           
                 }
             )
@@ -70,20 +82,17 @@ def ejecutar_procesamiento(fecha_str, datos):
             datos_extraidos = json.loads(respuesta_texto)
             lista_cpv = datos_extraidos.get("cpv", [])
             
-            # Guardamos solo los datos relevantes para la siguiente fase
             datos_filtrados[id_licitacion] = {
                 "Códigos CPV": lista_cpv,
                 "PDF": info.get('pdf', '')
             }
             
         except Exception as e:
-            # Si la IA falla (ej. timeout, modelo no encendido, JSON mal formado), 
-            # preservamos la información original para no perder el registro.
             datos_filtrados[id_licitacion] = info
             datos_filtrados[id_licitacion]["error_ia"] = str(e)
 
-    # Exportamos los datos procesados a la nueva carpeta
+    # Exportamos los datos procesados
     with open(ruta_salida, "w", encoding="utf-8") as f:
         json.dump(datos_filtrados, f, indent=4, ensure_ascii=False)
 
-    return {"status": "ok", "cantidad": len(datos_filtrados), "datos":datos_filtrados}
+    return {"status": "ok", "cantidad": len(datos_filtrados), "datos": datos_filtrados}
