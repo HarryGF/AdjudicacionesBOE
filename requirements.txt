@@ -1,23 +1,6 @@
-# ══════════════════════════════════════════════════════════════════
-# BOE Formalizaciones — Dependencias Python
-# ══════════════════════════════════════════════════════════════════
-# Instalación: pip install -r requirements.txt
-#
-# Requisito externo adicional (no gestionado por pip):
-#   - Ollama con el modelo qwen2.5:3b  →  https://ollama.com
-# ══════════════════════════════════════════════════════════════════
- 
-# --- Interfaz web ---
 streamlit==1.51.0
- 
-# --- Peticiones HTTP ---
 requests==2.32.5
- 
-# --- Extracción de texto desde PDF ---
 pdfplumber==0.11.0
- 
-# --- Manipulación de datos ---
 pandas==2.3.3
- 
-# --- Cliente IA local (Ollama) ---
 ollama==0.6.1
+psutil==7.0.0
