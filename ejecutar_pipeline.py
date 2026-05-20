@@ -42,7 +42,7 @@ if __name__ == "__main__":
         try:
             resultado = ejecutar_dia(fecha_str)
 
-            if hoy.weekday() == 0:  # Viernes: informe semanal + correo
+            if hoy.weekday() == 4:  # Viernes: informe semanal + correo
                 datos_semana = informe_semanal.generar_informe_semana(hoy)
 
                 lunes = hoy - datetime.timedelta(days=hoy.weekday())

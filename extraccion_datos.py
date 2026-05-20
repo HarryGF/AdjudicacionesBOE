@@ -142,7 +142,7 @@ def ejecutar_extraccion(fecha_str):
     if not lista_formalizaciones:
         return {"status": "ok", "cantidad": 0, "mensaje": "No hay licitaciones hoy."}
         
-    print(f"Encontradas {len(lista_formalizaciones)} posibles formalizaciones. Iniciando descarga de PDFs...\n")
+    print(f"\nEncontradas {len(lista_formalizaciones)} posibles formalizaciones. Iniciando descarga de PDFs...")
 
     formalizaciones_completas = []
     

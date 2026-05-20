@@ -5,6 +5,7 @@ Adjudicaciones_Filtradas/
 Datos_Pliegos/
 Documentos_Pliegos/
 Logs_Pipeline/
+pipeline.lock   
 
 # Ignorar archivos de Python y sistema
 __pycache__/
