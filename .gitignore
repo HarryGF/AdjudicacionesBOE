@@ -6,6 +6,7 @@ Datos_Pliegos/
 Documentos_Pliegos/
 Logs_Pipeline/
 pipeline.lock   
+Informes_Semanales/
 
 # Ignorar archivos de Python y sistema
 __pycache__/

@@ -6,17 +6,11 @@ import re
 import requests
 import pdfplumber
 
-# ══════════════════════════════════════════════════════════════════════════════
-# CONFIGURACIÓN Y PATRONES
-# ══════════════════════════════════════════════════════════════════════════════
 PATRONES_METADATOS = {
     "Objeto": r"(?i)Objeto:\s*(.*?)(?=Expediente:|$)",
     "Expediente": r"(?i)Expediente:\s*(.*?)(?=\s*\d+\.\s+[A-Z]|$)"
 }
 
-# ══════════════════════════════════════════════════════════════════════════════
-# FUNCIONES DE SOPORTE
-# ══════════════════════════════════════════════════════════════════════════════
 def codigos_objetivo(ruta_csv):
     cpvs_objetivo = set()
     try:
@@ -78,10 +72,6 @@ def exportar_a_csv(lista_diccionarios, columnas, nombre_archivo):
         escritor.writeheader()
         escritor.writerows(lista_diccionarios)
     print(f"Archivo creado: {ruta}")
-
-# ══════════════════════════════════════════════════════════════════════════════
-# FUNCIONES DE EXTRACCIÓN
-# ══════════════════════════════════════════════════════════════════════════════
 
 def extraer_metadatos(texto):
     res = {}
@@ -146,10 +136,6 @@ def extraer_importes(texto_completo):
         sel = re.search(r"seleccionada:\s*([\d.,]+)", chunk)
         resultados[lote_nombre] = sel.group(1) if sel else "0,00"
     return resultados
-
-# ══════════════════════════════════════════════════════════════════════════════
-# PROCESAMIENTO PRINCIPAL
-# ══════════════════════════════════════════════════════════════════════════════
 
 def filtrado_formalizaciones(fecha, datos):
     cpvs_objetivo = codigos_objetivo("codigosCPV.csv")
