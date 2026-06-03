@@ -29,6 +29,7 @@ def generar_informe_semana(fecha_referencia: datetime.date = None):
     semana_str = lunes.strftime("%Y%m%d")
 
     directorio = Path("Adjudicaciones_Filtradas")
+    directorio_informes = Path("Informes_Semanales")
     filas_anuncios = []
     filas_lotes    = []
 
@@ -55,8 +56,8 @@ def generar_informe_semana(fecha_referencia: datetime.date = None):
         print("No hay datos para esta semana.")
         return
 
-    ruta_informe_a = directorio / f"Informe_Anuncios_{semana_str}.csv"
-    ruta_informe_b = directorio / f"Informe_Lotes_{semana_str}.csv"
+    ruta_informe_a = directorio_informes / f"Informe_Anuncios_{semana_str}.csv"
+    ruta_informe_b = directorio_informes / f"Informe_Lotes_{semana_str}.csv"
 
     escribir_csv(ruta_informe_a, filas_anuncios, COLUMNAS_A)
     escribir_csv(ruta_informe_b, filas_lotes,    COLUMNAS_B)
