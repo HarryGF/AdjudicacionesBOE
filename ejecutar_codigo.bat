@@ -1,10 +1,15 @@
 @echo off
 chcp 65001 >NUL
 
-set "PYTHON=C:\Users\CTRACC\AppData\Local\Python\bin\python.exe"
-set "DIRECTORIO=C:\Users\CTRACC\OneDrive\OneDrive - INSTRUMENTACIÓN ESPECÍFICA DE MATERIALES S.A\Documents\ProgramasBOE\AdjudicacionesBOE"
-set "UV_PATH=C:\Users\CTRACC\.local\bin\uv.exe"
-set "OLLAMA_PATH=C:\Users\CTRACC\AppData\Local\Programs\Ollama\ollama.exe"
+:: Para que el programa funcione tienes que cambiar la ubicacion de los directorios por los tuyos
+:: Directorio en el que usa Python
+set "PYTHON=C:\Users\Pruebas"
+:: Directorio donde se encuentra el programa
+set "DIRECTORIO=C:\Users\Pruebas"
+:: Directorio del uv
+set "UV_PATH=C:\Users\Pruebas"
+:: Directorio de ollama
+set "OLLAMA_PATH=C:\Users\Pruebas"
 
 for %%F in ("%UV_PATH%") do set "PATH=%%~dpF;%PATH%"
 
